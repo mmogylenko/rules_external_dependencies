@@ -1,0 +1,74 @@
+# Cut a release whenever a new tag is pushed to the repo.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  binary:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["linux", "darwin"]
+        cpu: ["amd64", "arm64"]
+        application: ["parser"]
+        executable_mime:
+          ["application/x-executable", "application/x-mach-binary"]
+        exclude:
+          - os: darwin
+            cpu: s390x
+          - os: darwin
+            executable_mime: "application/x-executable"
+          - os: linux
+            executable_mime: "application/x-mach-binary"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Mount bazel caches
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/bazel
+            ~/.cache/bazel-repo
+          key: bazel-cache-${{ hashFiles('**/BUILD.bazel', '**/*.bzl', 'WORKSPACE') }}
+          restore-keys: bazel-cache-
+      - name: Build ${{ matrix.os }}_${{ matrix.cpu }} Binary
+        run: |
+          bazel build --platforms=@io_bazel_rules_go//go/toolchain:${{ matrix.os }}_${{ matrix.cpu }} //cmd/${{ matrix.application }}:${{ matrix.application }}
+      - run: cp $(bazel info bazel-bin)/cmd/${{ matrix.application }}/${{ matrix.application }}_/${{ matrix.application }} ${{ matrix.application }}_${{ matrix.os }}_${{ matrix.cpu }}
+      - uses: actions/upload-artifact@v3
+        with:
+          #name: ${{ matrix.application }}_${{ matrix.os }}_${{ matrix.cpu }}
+          name: dist
+          path: ${{ matrix.application }}_${{ matrix.os }}_${{ matrix.cpu }}
+
+  release:
+    runs-on: ubuntu-latest
+    needs: binary
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - uses: actions/download-artifact@v3
+      - name: debug-show-dir
+        run: |
+          ls -la
+          ls -la dist/
+      - name: Prepare release notes and artifacts
+        run: .github/workflows/release_prep.sh ${{ env.GITHUB_REF_NAME }} > release_notes.txt
+      - name: debug-show-dir2
+        run: |
+          ls -la dist/
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          prerelease: false
+          generate_release_notes: true
+          body_path: release_notes.txt
+          fail_on_unmatched_files: true
+          files: dist/*

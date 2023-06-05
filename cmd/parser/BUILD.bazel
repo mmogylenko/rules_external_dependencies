@@ -1,0 +1,40 @@
+load("@bazel_gazelle//:def.bzl", "gazelle")
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+
+# gazelle:prefix github.com/mmogylenko/rules_external_dependencies/cmd/parser
+gazelle(name = "gazelle")
+
+gazelle(
+    name = "update-repos",
+    args = [
+        "-from_file=cmd/parser/go.mod",
+        "-to_macro=cmd/parser/deps.bzl%go_dependencies",
+        "-prune",
+        "-build_file_proto_mode=disable_global",
+    ],
+    command = "update-repos",
+)
+
+go_library(
+    name = "parser_lib",
+    srcs = ["parser.go"],
+    importpath = "github.com/mmogylenko/rules_external_dependencies/cmd/parser",
+    visibility = ["//visibility:private"],
+    deps = [
+        "@com_github_json_iterator_go//:go",
+        "@in_gopkg_yaml_v2//:yaml_v2",
+    ],
+)
+
+go_binary(
+    name = "parser",
+    embed = [":parser_lib"],
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "parser_test",
+    srcs = ["parser_test.go"],
+    embed = [":parser_lib"],
+    deps = ["@com_github_stretchr_testify//assert"],
+)

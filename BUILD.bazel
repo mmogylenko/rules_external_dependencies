@@ -1,0 +1,19 @@
+load("@buildifier_prebuilt//:rules.bzl", "buildifier")
+
+[buildifier(
+    name = "buildifier." + MODE,
+    exclude_patterns = [
+        "*/node_modules/*",
+        "*/dist/*",
+        "./*local*/*",
+        "./*tmp*/*",
+    ],
+    lint_mode = "warn",
+    lint_warnings = ["all"],
+    mode = MODE,
+    verbose = True,
+    visibility = ["//visibility:public"],
+) for MODE in [
+    "check",
+    "fix",
+]]
