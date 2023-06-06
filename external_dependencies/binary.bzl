@@ -38,6 +38,11 @@ def _external_binary_impl(ctx):
         args["stripPrefix"] = ctx.attr.strip_prefix.format(version = ctx.attr.version, arch = os_arch)
 
     if ctx.attr.tests:
+        env_vars = ctx.attr.tests.get("envVars", [])
+        env_vars_formatted = [{"key": e.split("=")[0], "value": e.split("=")[1]} for e in env_vars]
+        env_vars_str = ""
+        if env_vars:
+            env_vars_str = "envVars: {}".format(env_vars_formatted)
         test_filename = "tests.yaml"
         test_contents = """
 schemaVersion: "2.0.0"
@@ -47,9 +52,11 @@ commandTests:
     command: "{name}"
     args: {args}
     expectedOutput: {output}
+    {envVars}
 """.format(
             name = ctx.attr.name,
             args = ctx.attr.tests.get("args", []),
+            envVars = env_vars_str,
             output = [o.format(version = ctx.attr.version) for o in ctx.attr.tests.get("output", [])],
         )
         ctx.file(test_filename, test_contents)

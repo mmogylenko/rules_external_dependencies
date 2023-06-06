@@ -6,6 +6,7 @@ pkg_tar(
     name = "binaries",
     srcs = [
         "@goreleaser",
+        "@helmfile",
         "@kubectl",
     ],
     mode = "0755",
@@ -24,6 +25,7 @@ container_structure_test(
     name = "container_test",
     configs = [
         "@goreleaser//:tests.yaml",
+        "@helmfile//:tests.yaml",
         "@kubectl//:tests.yaml",
     ],
     image = ":container",
