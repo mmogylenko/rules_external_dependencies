@@ -23,7 +23,8 @@ oci_image(
 container_structure_test(
     name = "container_test",
     configs = [
-        "tests.yaml",
+        "@goreleaser//:tests.yaml",
+        "@kubectl//:tests.yaml",
     ],
     image = ":container",
     visibility = ["//visibility:public"],
