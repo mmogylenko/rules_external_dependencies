@@ -24,6 +24,9 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
+        directory:
+          - cmd/parser
+          - e2e/smoke
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -35,18 +38,19 @@ jobs:
           path: |
             ~/.cache/bazel
             ~/.cache/bazel-repo
-          key: bazel-cache-${{ matrix.os }}-${{ matrix.folder }}-${{ hashFiles('**/BUILD.bazel', '**/*.bzl', 'WORKSPACE') }}
+          key: bazel-cache-${{ matrix.os }}-${{ matrix.directory }}-${{ hashFiles('**/BUILD.bazel', '**/*.bzl', 'WORKSPACE') }}
           restore-keys: |
-            bazel-cache-${{ matrix.os }}-${{ matrix.folder }}
+            bazel-cache-${{ matrix.os }}-${{ matrix.directory }}
             bazel-cache-${{ matrix.os }}
             bazel-cache-
       - name: buildifier
         env:
           # Bazelisk will download bazel to here, ensure it is cached between runs.
           XDG_CACHE_HOME: ~/.cache/bazel-repo
-        run: bazel --bazelrc=$GITHUB_WORKSPACE/.github/workflows/ci.bazelrc --bazelrc=.bazelrc run buildifier.check
+        run: bazel --bazelrc=$GITHUB_WORKSPACE/.github/workflows/ci.bazelrc --bazelrc=$GITHUB_WORKSPACE/.bazelrc run buildifier.check
       - name: bazel test //...
+        working-directory: ${{ matrix.directory }}
         env:
           # Bazelisk will download bazel to here, ensure it is cached between runs.
           XDG_CACHE_HOME: ~/.cache/bazel-repo
-        run: bazel --bazelrc=$GITHUB_WORKSPACE/.github/workflows/ci.bazelrc --bazelrc=.bazelrc test //...
+        run: bazel --bazelrc=$GITHUB_WORKSPACE/.github/workflows/ci.bazelrc --bazelrc=$GITHUB_WORKSPACE/.bazelrc test //...

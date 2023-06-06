@@ -13,9 +13,9 @@ def _repositories_impl(ctx):
     elif platform != "linux":
         fail("Unsupported OS %s" % platform)
 
-    if os_arch == "aarch64":
+    if os_arch in ["aarch64", "arm64"]:
         os_arch = "arm64"
-    elif os_arch == "x86_64":
+    elif os_arch in ["x86_64", "amd64"]:
         os_arch = "amd64"
     else:
         fail("Unsupported arch %s" % os_arch)
