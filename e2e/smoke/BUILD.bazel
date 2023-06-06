@@ -1,0 +1,30 @@
+load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@rules_pkg//:pkg.bzl", "pkg_tar")
+load("@container_structure_test//:defs.bzl", "container_structure_test")
+
+pkg_tar(
+    name = "binaries",
+    srcs = [
+        "@goreleaser",
+        "@kubectl",
+    ],
+    mode = "0755",
+    package_dir = "/usr/local/bin",
+    tags = ["tools"],
+)
+
+oci_image(
+    name = "container",
+    base = "@distroless_base",
+    tars = [":binaries"],
+    visibility = ["//visibility:private"],
+)
+
+container_structure_test(
+    name = "container_test",
+    configs = [
+        "tests.yaml",
+    ],
+    image = ":container",
+    visibility = ["//visibility:public"],
+)

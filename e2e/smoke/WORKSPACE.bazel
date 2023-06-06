@@ -1,0 +1,28 @@
+workspace(name = "workspace")
+
+local_repository(
+    name = "rules_external_dependencies",
+    path = "../../external_dependencies",
+)
+
+load("@rules_external_dependencies//:repositories.bzl", "external_dependencies_repositories")
+load("@rules_external_dependencies//:defs.bzl", "config_parser")
+load("@rules_external_dependencies//:binary.bzl", "external_binary")
+
+external_dependencies_repositories()
+
+config_parser(
+    name = "dependencies",
+    src = "@//:dependencies.yaml",
+    out = "def.bzl",
+)
+
+load("@dependencies//:def.bzl", "binaries")
+
+[
+    external_binary(
+        name = name,
+        config = config,
+    )
+    for name, config in binaries.items()
+]
