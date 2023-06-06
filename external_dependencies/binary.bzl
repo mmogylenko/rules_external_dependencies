@@ -37,6 +37,23 @@ def _external_binary_impl(ctx):
     if ctx.attr.strip_prefix != "":
         args["stripPrefix"] = ctx.attr.strip_prefix.format(version = ctx.attr.version, arch = os_arch)
 
+    if ctx.attr.tests:
+        test_filename = "tests.yaml"
+        test_contents = """
+schemaVersion: "2.0.0"
+
+commandTests:
+  - name: "check-{name}"
+    command: "{name}"
+    args: {args}
+    expectedOutput: {output}
+""".format(
+            name = ctx.attr.name,
+            args = ctx.attr.tests.get("args", []),
+            output = [o.format(version = ctx.attr.version) for o in ctx.attr.tests.get("output", [])],
+        )
+        ctx.file(test_filename, test_contents)
+
     if any([url.endswith(suffix) for suffix in [".zip", ".tar.gz", ".tgz", ".tar.bz2", ".tar.xz"]]):
         ctx.download_and_extract(output = ".", **args)
         build_contents = """
@@ -46,10 +63,12 @@ def _external_binary_impl(ctx):
 
         filegroup(
             name = "{name}_filegroup",
-            srcs = glob([
-                "**/{name}",
-                "**/{name}.exe",
-            ]),
+            srcs = glob(
+                [
+                    "**/{name}",
+                    "**/{name}.exe",
+                ],
+            ),
         )
 
         copy_file(
@@ -69,7 +88,7 @@ def _external_binary_impl(ctx):
 
         load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
 
-        exports_files(["{name}"])
+        exports_files(["{name}", "tests.yaml"])
 
         copy_file(
             name = "binary",
@@ -96,6 +115,10 @@ _external_binary = repository_rule(
         "strip_prefix": attr.string(
             mandatory = False,
             doc = "Directory prefixex to strip from the extracted files",
+        ),
+        "tests": attr.string_list_dict(
+            mandatory = False,
+            doc = "Optional tests for the binary",
         ),
         "url": attr.string(
             mandatory = True,

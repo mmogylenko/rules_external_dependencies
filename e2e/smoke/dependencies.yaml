@@ -5,9 +5,15 @@ binaries:
       arm64: 1d77d6027fc8dfed772609ad9bd68f611b7e4ce73afa949f27084ad3a92b15fe
     url: https://dl.k8s.io/release/v{version}/bin/linux/{arch}/kubectl
     version: 1.23.0
+    tests:
+      args: ["version", "--client"]
+      output: ['GitVersion:"v{version}"']
   goreleaser:
     sha256:
       arm64: ef22fb7a6e11b70cec714440b2649ac2abe6f17eb2932cfca6dbc5b15fb3b240
       x86_64: 811e0c63e347f78f3c8612a19ca8eeb564eb45f0265ce3f38aec39c8fdbcfa10
     url: https://github.com/goreleaser/goreleaser/releases/download/v{version}/goreleaser_Linux_{arch}.tar.gz
     version: 1.18.2
+    tests:
+      args: ["--version"]
+      output: ["GitVersion:.*{version}"]
