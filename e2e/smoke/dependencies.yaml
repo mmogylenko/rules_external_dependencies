@@ -17,3 +17,13 @@ binaries:
     tests:
       args: ["--version"]
       output: ["GitVersion:.*{version}"]
+  helmfile:
+    sha256:
+      amd64: bc6ace0d37459f5f4f1f3949590e4e7975581ba4dedaf7ba978288ae968c7228
+      arm64: 2f8775448c42e9865a969f8227763db01ad6cde5898646619ccdaea7c06d4434
+    url: https://github.com/helmfile/helmfile/releases/download/v{version}/helmfile_{version}_linux_{arch}.tar.gz
+    version: 0.154.0
+    tests:
+      args: ["version", "-o", "short"]
+      envVars: ["HELMFILE_UPGRADE_NOTICE_DISABLED=true"]
+      output: ["{version}"]
