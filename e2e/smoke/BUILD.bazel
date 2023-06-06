@@ -1,6 +1,6 @@
+load("@container_structure_test//:defs.bzl", "container_structure_test")
 load("@rules_oci//oci:defs.bzl", "oci_image")
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
-load("@container_structure_test//:defs.bzl", "container_structure_test")
 
 pkg_tar(
     name = "binaries",

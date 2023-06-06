@@ -5,9 +5,9 @@ local_repository(
     path = "../../external_dependencies",
 )
 
-load("@rules_external_dependencies//:repositories.bzl", "external_dependencies_repositories")
-load("@rules_external_dependencies//:defs.bzl", "config_parser")
 load("@rules_external_dependencies//:binary.bzl", "external_binary")
+load("@rules_external_dependencies//:defs.bzl", "config_parser")
+load("@rules_external_dependencies//:repositories.bzl", "external_dependencies_repositories")
 
 external_dependencies_repositories()
 
