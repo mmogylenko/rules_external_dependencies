@@ -15,13 +15,14 @@ def _external_binary_impl(ctx):
         }
         if ctx.attr.strip_prefix != "":
             args["stripPrefix"] = ctx.attr.strip_prefix.format(version = ctx.attr.version, arch = arch)
-
         if any([url.endswith(suffix) for suffix in [".zip", ".tar.gz", ".tgz", ".tar.bz2", ".tar.xz"]]):
+            ctx.report_progress("Downloading {} from".format(ctx.attr.name, url))
             ctx.download_and_extract(
                 output = ".",
-                rename_files = {ctx.attr.name: _normalized_name},
+                #rename_files = {rename_from: _normalized_name},
                 **args
             )
+            ctx.execute(["mv", ctx.attr.name, _normalized_name])
 
             exports_files_list.append(_normalized_name)
         else:
