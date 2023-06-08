@@ -1,51 +1,77 @@
 load("@container_structure_test//:defs.bzl", "container_structure_test")
-load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_image_index")
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
+load(":defs.bzl", "multi_arch")
 
-[
-    pkg_tar(
-        name = "binaries_{}".format(arch),
-        srcs = [
-            "@kubectl//:kubectl_{}".format(arch),
+platform(
+    name = "linux_arm64",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:arm64",
+    ],
+)
+
+platform(
+    name = "linux_amd64",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
+)
+
+pkg_tar(
+    name = "binaries",
+    srcs = select({
+        "@platforms//cpu:arm64": [
+            "@kubectl//:kubectl_arm64",
         ],
-        mode = "0755",
-        package_dir = "/usr/local/bin",
-        remap_paths = {
-            "/kubectl_{}".format(arch): "kubectl",
+        "@platforms//cpu:x86_64": [
+            "@kubectl//:kubectl_amd64",
+        ],
+    }),
+    mode = "0755",
+    package_dir = "/usr/local/bin",
+    remap_paths = select({
+        "@platforms//cpu:arm64": {
+            "/kubectl_arm64": "kubectl",
         },
-    )
-    for arch in [
-        "arm64",
-        "amd64",
-    ]
-]
+        "@platforms//cpu:x86_64": {
+            "/kubectl_amd64": "kubectl",
+        },
+    }),
+)
 
-[
-    oci_image(
-        name = "container_{}".format(arch),
-        base = "@distroless_base",
-        tars = [
-            ":binaries_{}".format(arch),
-        ],
-        visibility = ["//visibility:public"],
-    )
-    for arch in [
-        "arm64",
-        "amd64",
-    ]
-]
+oci_image(
+    name = "container",
+    base = "@ubuntu",
+    tars = [":binaries"],
+)
 
-[
-    container_structure_test(
-        name = "container_test_{}".format(arch),
-        configs = [
-            "@kubectl//:tests.yaml",
-        ],
-        image = ":container_{}".format(arch),
-        visibility = ["//visibility:public"],
-    )
-    for arch in [
-        "arm64",
-        "amd64",
-    ]
-]
+multi_arch(
+    name = "transitions",
+    image = ":container",
+    platforms = [
+        ":linux_arm64",
+        ":linux_amd64",
+    ],
+)
+
+oci_image_index(
+    name = "containers_index",
+    images = [":transitions"],
+)
+
+# oci_push(
+#     name = "publish",
+#     image = ":containers_index",
+#     remote_tags = ["latest"],
+#     repository = "localhost:5002/experimental/kubectl",
+# )
+
+container_structure_test(
+    name = "container_test",
+    configs = [
+        "@kubectl//:tests.yaml",
+    ],
+    image = ":container",
+)
