@@ -3,18 +3,17 @@
 bazel_dep(name = "container_structure_test", version = "1.15.0", dev_dependency = True)
 bazel_dep(name = "rules_pkg", version = "0.9.1", dev_dependency = True)
 bazel_dep(name = "rules_oci", version = "1.0.0", dev_dependency = True)
-bazel_dep(name = "platforms", version = "0.0.6", dev_dependency = True)
 
-bazel_dep(name = "bazel_skylib", version = "1.4.1")
+bazel_dep(name = "platforms", version = "0.0.6")
 
 oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
 oci.pull(
-    name = "distroless_base",
-    digest = "sha256:df13a91fd415eb192a75e2ef7eacf3bb5877bb05ce93064b91b83feef5431f37",
-    image = "gcr.io/distroless/base",
+    name = "ubuntu",
+    digest = "sha256:dfd64a3b4296d8c9b62aa3309984f8620b98d87e47492599ee20739e8eb54fbf",
+    image = "ubuntu",
     platforms = [
+        "linux/arm64/v8",
         "linux/amd64",
-        "linux/arm64",
     ],
 )
-use_repo(oci, "distroless_base")
+use_repo(oci, "ubuntu")

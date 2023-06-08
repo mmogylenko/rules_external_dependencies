@@ -1,18 +1,31 @@
 load("@container_structure_test//:defs.bzl", "container_structure_test")
-load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_image_index")
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
+load(":defs.bzl", "multi_arch")
+
+platform(
+    name = "linux_arm64",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:arm64",
+    ],
+)
+
+platform(
+    name = "linux_amd64",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
+)
 
 pkg_tar(
     name = "binaries",
     srcs = select({
         "@platforms//cpu:arm64": [
-            "@goreleaser//:goreleaser_arm64",
-            "@helmfile//:helmfile_arm64",
             "@kubectl//:kubectl_arm64",
         ],
         "@platforms//cpu:x86_64": [
-            "@goreleaser//:goreleaser_amd64",
-            "@helmfile//:helmfile_amd64",
             "@kubectl//:kubectl_amd64",
         ],
     }),
@@ -20,13 +33,9 @@ pkg_tar(
     package_dir = "/usr/local/bin",
     remap_paths = select({
         "@platforms//cpu:arm64": {
-            "/goreleaser_arm64": "goreleaser",
-            "/helmfile_arm64": "helmfile",
             "/kubectl_arm64": "kubectl",
         },
         "@platforms//cpu:x86_64": {
-            "/goreleaser_amd64": "goreleaser",
-            "/helmfile_amd64": "helmfile",
             "/kubectl_amd64": "kubectl",
         },
     }),
@@ -34,18 +43,35 @@ pkg_tar(
 
 oci_image(
     name = "container",
-    base = "@distroless_base",
+    base = "@ubuntu",
     tars = [":binaries"],
-    visibility = ["//visibility:private"],
 )
+
+multi_arch(
+    name = "transitions",
+    image = ":container",
+    platforms = [
+        ":linux_arm64",
+        ":linux_amd64",
+    ],
+)
+
+oci_image_index(
+    name = "containers_index",
+    images = [":transitions"],
+)
+
+# oci_push(
+#     name = "publish",
+#     image = ":containers_index",
+#     remote_tags = ["latest"],
+#     repository = "localhost:5002/experimental/kubectl",
+# )
 
 container_structure_test(
     name = "container_test",
     configs = [
-        "@goreleaser//:tests.yaml",
-        "@helmfile//:tests.yaml",
         "@kubectl//:tests.yaml",
     ],
     image = ":container",
-    visibility = ["//visibility:public"],
 )

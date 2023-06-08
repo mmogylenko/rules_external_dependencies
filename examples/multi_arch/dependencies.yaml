@@ -1,0 +1,10 @@
+binaries:
+  kubectl:
+    sha256:
+      amd64: 2d0f5ba6faa787878b642c151ccb2c3390ce4c1e6c8e2b59568b3869ba407c4f
+      arm64: 1d77d6027fc8dfed772609ad9bd68f611b7e4ce73afa949f27084ad3a92b15fe
+    url: https://dl.k8s.io/release/v{version}/bin/linux/{arch}/kubectl
+    version: 1.23.0
+    tests:
+      args: ["version", "--client"]
+      output: ['GitVersion:"v{version}"']
