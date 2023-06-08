@@ -2,34 +2,25 @@ load("@container_structure_test//:defs.bzl", "container_structure_test")
 load("@rules_oci//oci:defs.bzl", "oci_image")
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
 
+_BINS = {
+    "@platforms//cpu:arm64": {
+        "goreleaser": "goreleaser_arm64",
+        "helmfile": "helmfile_arm64",
+        "kubectl": "kubectl_arm64",
+    },
+    "@platforms//cpu:x86_64": {
+        "goreleaser": "goreleaser_amd64",
+        "helmfile": "helmfile_amd64",
+        "kubectl": "kubectl_amd64",
+    },
+}
+
 pkg_tar(
     name = "binaries",
-    srcs = select({
-        "@platforms//cpu:arm64": [
-            "@goreleaser//:goreleaser_arm64",
-            "@helmfile//:helmfile_arm64",
-            "@kubectl//:kubectl_arm64",
-        ],
-        "@platforms//cpu:x86_64": [
-            "@goreleaser//:goreleaser_amd64",
-            "@helmfile//:helmfile_amd64",
-            "@kubectl//:kubectl_amd64",
-        ],
-    }),
+    srcs = select({arch: ["@%s//:%s" % (binary, name) for binary, name in binaries.items()] for arch, binaries in _BINS.items()}),
     mode = "0755",
     package_dir = "/usr/local/bin",
-    remap_paths = select({
-        "@platforms//cpu:arm64": {
-            "/goreleaser_arm64": "goreleaser",
-            "/helmfile_arm64": "helmfile",
-            "/kubectl_arm64": "kubectl",
-        },
-        "@platforms//cpu:x86_64": {
-            "/goreleaser_amd64": "goreleaser",
-            "/helmfile_amd64": "helmfile",
-            "/kubectl_amd64": "kubectl",
-        },
-    }),
+    remap_paths = select({arch: {"/%s" % name: binary for binary, name in binaries.items()} for arch, binaries in _BINS.items()}),
 )
 
 oci_image(
