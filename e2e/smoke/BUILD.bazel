@@ -12,7 +12,7 @@ pkg_tar(
         ],
         "@platforms//cpu:x86_64": [
             "@goreleaser//:goreleaser_amd64",
-            "@helmfile//:helmfile_arm64",
+            "@helmfile//:helmfile_amd64",
             "@kubectl//:kubectl_amd64",
         ],
     }),
