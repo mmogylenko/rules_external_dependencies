@@ -1,0 +1,51 @@
+load("@container_structure_test//:defs.bzl", "container_structure_test")
+load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@rules_pkg//:pkg.bzl", "pkg_tar")
+
+[
+    pkg_tar(
+        name = "binaries_{}".format(arch),
+        srcs = [
+            "@kubectl//:kubectl_{}".format(arch),
+        ],
+        mode = "0755",
+        package_dir = "/usr/local/bin",
+        remap_paths = {
+            "/kubectl_{}".format(arch): "kubectl",
+        },
+    )
+    for arch in [
+        "arm64",
+        "amd64",
+    ]
+]
+
+[
+    oci_image(
+        name = "container_{}".format(arch),
+        base = "@distroless_base",
+        tars = [
+            ":binaries_{}".format(arch),
+        ],
+        visibility = ["//visibility:public"],
+    )
+    for arch in [
+        "arm64",
+        "amd64",
+    ]
+]
+
+[
+    container_structure_test(
+        name = "container_test_{}".format(arch),
+        configs = [
+            "@kubectl//:tests.yaml",
+        ],
+        image = ":container_{}".format(arch),
+        visibility = ["//visibility:public"],
+    )
+    for arch in [
+        "arm64",
+        "amd64",
+    ]
+]

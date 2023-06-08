@@ -3,39 +3,31 @@ This module contains the implementation to pull in external binaries.
 """
 
 def _external_binary_impl(ctx):
-    arch = ctx.attr.architecture
+    archs = ctx.attr.sha256.keys()
+    exports_files_list = []
 
-    if arch == "" or arch == None:
-        os_arch = ctx.os.arch
+    for arch in archs:
+        _normalized_name = "{}_{}".format(ctx.attr.name, arch.replace("x86_64", "amd64"))
+        url = ctx.attr.url.format(version = ctx.attr.version, arch = arch)
+        args = {
+            "sha256": ctx.attr.sha256[arch],
+            "url": url,
+        }
+        if ctx.attr.strip_prefix != "":
+            args["stripPrefix"] = ctx.attr.strip_prefix.format(version = ctx.attr.version, arch = arch)
 
-    else:
-        os_arch = arch
+        if any([url.endswith(suffix) for suffix in [".zip", ".tar.gz", ".tgz", ".tar.bz2", ".tar.xz"]]):
+            ctx.download_and_extract(
+                output = ".",
+                rename_files = {ctx.attr.name: _normalized_name},
+                **args
+            )
 
-    if os_arch in ["aarch64", "arm64"]:
-        os_arch = "arm64"
-    elif os_arch in ["x86_64", "amd64"]:
-        os_arch = "amd64"
-    else:
-        fail("Unsupported arch %s" % os_arch)
-
-    if os_arch not in ctx.attr.sha256:
-        if os_arch == "amd64":
-            dep_arch = "x86_64"
-        elif os_arch == "x86_64":
-            dep_arch = "amd64"
+            exports_files_list.append(_normalized_name)
         else:
-            dep_arch = os_arch
-    else:
-        dep_arch = os_arch
-
-    url = ctx.attr.url.format(version = ctx.attr.version, arch = dep_arch)
-    args = {
-        "sha256": ctx.attr.sha256[dep_arch],
-        "url": url,
-    }
-
-    if ctx.attr.strip_prefix != "":
-        args["stripPrefix"] = ctx.attr.strip_prefix.format(version = ctx.attr.version, arch = os_arch)
+            args["executable"] = True
+            ctx.download(output = _normalized_name, **args)
+            exports_files_list.append(_normalized_name)
 
     if ctx.attr.tests:
         env_vars = ctx.attr.tests.get("envVars", [])
@@ -60,61 +52,20 @@ commandTests:
             output = [o.format(version = ctx.attr.version) for o in ctx.attr.tests.get("output", [])],
         )
         ctx.file(test_filename, test_contents)
+        exports_files_list.append(test_filename)
 
-    if any([url.endswith(suffix) for suffix in [".zip", ".tar.gz", ".tgz", ".tar.bz2", ".tar.xz"]]):
-        ctx.download_and_extract(output = ".", **args)
-        build_contents = """
-        package(default_visibility = ["//visibility:public"])
+    build_contents = """
+    package(default_visibility = ["//visibility:public"])
 
-        load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
-
-        filegroup(
-            name = "{name}_filegroup",
-            srcs = glob(
-                [
-                    "**/{name}",
-                    "**/{name}.exe",
-                ],
-            ),
-        )
-
-        copy_file(
-            name = "binary",
-            src = ":{name}_filegroup",
-            out = ".binary",
-            is_executable = True,
-        )
-
-        exports_files(glob(["**/*"]))
-        """.format(name = ctx.attr.name)
-    else:
-        args["executable"] = True
-        ctx.download(output = "{name}".format(name = ctx.attr.name), **args)
-        build_contents = """
-        package(default_visibility = ["//visibility:public"])
-
-        load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
-
-        exports_files(["{name}", "tests.yaml"])
-
-        copy_file(
-            name = "binary",
-            src = ":{name}",
-            out = ".binary",
-            is_executable = True,
-        )
-        """.format(name = ctx.attr.name)
+    exports_files({exports_files_list})
+    """.format(exports_files_list = exports_files_list)
 
     build_contents = "\n".join([x.lstrip(" ") for x in build_contents.splitlines()])
-    ctx.file("BUILD.bazel", build_contents)
+    ctx.file("BUILD.bazel", build_contents, executable = True)
 
 _external_binary = repository_rule(
     implementation = _external_binary_impl,
     attrs = {
-        "architecture": attr.string(
-            doc = "The CPU architecture which the binaries in this image are built to run on. eg: `arm64`, `amd64`",
-            mandatory = False,
-        ),
         "sha256": attr.string_dict(
             allow_empty = False,
             doc = "Checksum of the binaries, keyed by os name",
@@ -138,10 +89,9 @@ _external_binary = repository_rule(
     },
 )
 
-def external_binary(name, config, architecture = None):
+def external_binary(name, config):
     _external_binary(
         name = name,
-        architecture = architecture,
         **config
     )
 

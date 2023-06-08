@@ -4,14 +4,32 @@ load("@rules_pkg//:pkg.bzl", "pkg_tar")
 
 pkg_tar(
     name = "binaries",
-    srcs = [
-        "@goreleaser",
-        "@helmfile",
-        "@kubectl",
-    ],
+    srcs = select({
+        "@platforms//cpu:arm64": [
+            "@goreleaser//:goreleaser_arm64",
+            "@helmfile//:helmfile_arm64",
+            "@kubectl//:kubectl_arm64",
+        ],
+        "@platforms//cpu:x86_64": [
+            "@goreleaser//:goreleaser_amd64",
+            "@helmfile//:helmfile_arm64",
+            "@kubectl//:kubectl_amd64",
+        ],
+    }),
     mode = "0755",
     package_dir = "/usr/local/bin",
-    tags = ["tools"],
+    remap_paths = select({
+        "@platforms//cpu:arm64": {
+            "/goreleaser_arm64": "goreleaser",
+            "/helmfile_arm64": "helmfile",
+            "/kubectl_arm64": "kubectl",
+        },
+        "@platforms//cpu:x86_64": {
+            "/goreleaser_amd64": "goreleaser",
+            "/helmfile_amd64": "helmfile",
+            "/kubectl_amd64": "kubectl",
+        },
+    }),
 )
 
 oci_image(
